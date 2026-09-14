@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Heart, Trash2, Edit2, FileIcon, ImageIcon, VideoIcon } from "lucide-react";
 
 export type AssetType = "image" | "video" | "document" | "other";
@@ -45,7 +46,7 @@ export function AssetGrid({ assets, onDelete, onFavorite, onEdit }: AssetGridPro
         <div key={asset.id} className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
           <div className="aspect-square bg-slate-100 flex items-center justify-center relative overflow-hidden">
             {asset.type === "image" ? (
-              <img src={asset.url} alt={asset.fileName} className="object-cover w-full h-full" />
+              <Image src={asset.url} alt={asset.fileName} fill className="object-cover" />
             ) : asset.type === "video" ? (
               <div className="flex flex-col items-center text-slate-400">
                 <VideoIcon className="w-10 h-10 mb-2" />
