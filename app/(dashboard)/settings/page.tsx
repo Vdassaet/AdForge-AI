@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User, Building, CreditCard, Facebook, Bell, Users, Shield, Sliders } from "lucide-react";
+import { User, Building, CreditCard, Globe, Bell, Users, Shield, Sliders } from "lucide-react";
 
 export default function SettingsPage() {
   const sections = [
@@ -16,7 +16,7 @@ export default function SettingsPage() {
     {
       title: "Integrations & Billing",
       items: [
-        { name: "Facebook & Instagram", href: "/integrations/meta", icon: Facebook, desc: "Connect your ad accounts and pages." },
+        { name: "Facebook & Instagram", href: "/integrations/meta", icon: Globe, desc: "Connect your ad accounts and pages." },
         { name: "Billing & Plans", href: "/billing", icon: CreditCard, desc: "Manage your subscription and payment methods." },
         { name: "Notifications", href: "/notifications", icon: Bell, desc: "Configure how you want to be alerted." },
       ]
