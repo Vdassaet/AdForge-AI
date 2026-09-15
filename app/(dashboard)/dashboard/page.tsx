@@ -1,256 +1,125 @@
 "use client";
 
-import {
-  Megaphone,
-  Users,
-  DollarSign,
-  MousePointerClick,
-  Phone,
-  Globe,
-  TrendingUp,
-  ArrowUpRight,
-} from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { demoStore } from "@/lib/demo/demo-data";
-import { SimulatedBadge } from "@/components/demo/simulated-badge";
+import { PlusCircle, Users, Phone, DollarSign, Target } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  daily_budget: number;
+  location: string;
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const supabase = createClient();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    async function loadDashboard() {
+      const { data } = await supabase
+        .from("campaigns")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setCampaigns(data);
+      }
       setLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
+    }
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const business = demoStore.getBusiness();
-  const analytics = demoStore.getAnalytics();
-  const campaigns = demoStore.getCampaigns();
-  const recentLeads = demoStore.getLeads().slice(0, 4);
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
-  const stats = [
-    {
-      name: "Active Campaigns",
-      value: analytics.activeCampaigns.toString(),
-      icon: Megaphone,
-      trend: "+3 this month",
-    },
-    {
-      name: "Total Leads",
-      value: analytics.totalLeads.toString(),
-      icon: Users,
-      trend: "+18% vs prev",
-    },
-    {
-      name: "Cost Per Lead",
-      value: `$${analytics.avgCpl.toFixed(2)}`,
-      icon: DollarSign,
-      trend: "-12% improvement",
-    },
-    {
-      name: "Ad Spend",
-      value: `$${analytics.totalSpend.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-      icon: MousePointerClick,
-      trend: "on target",
-    },
-    {
-      name: "Calls Tracked",
-      value: analytics.callsReceived.toString(),
-      icon: Phone,
-      trend: "+24% inbound",
-    },
-    {
-      name: "Web Leads",
-      value: analytics.formLeads.toString(),
-      icon: Globe,
-      trend: "+9% conversion",
-    },
-    {
-      name: "Conversion Rate",
-      value: `${analytics.conversionRate}%`,
-      icon: TrendingUp,
-      trend: "+2.4% avg",
-    },
-  ];
+  const hasCampaigns = campaigns.length > 0;
+
+  if (!hasCampaigns) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] max-w-lg mx-auto text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="bg-primary/10 p-6 rounded-full mb-2">
+          <Target className="h-12 w-12 text-primary" />
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          Let&apos;s get your first ad running.
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          Tell us what you want to advertise. We&apos;ll handle the complex targeting, design, and settings automatically.
+        </p>
+        <Link 
+          href="/campaigns/new" 
+          className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all active:scale-95"
+        >
+          <PlusCircle className="h-6 w-6" />
+          Create my first ad
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Top Header */}
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {business.name}
-            </h1>
-            <SimulatedBadge variant="outline" label="Demo Account" />
-          </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {business.tagline} &bull; Paramus &amp; Northern New Jersey
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            How is my advertising doing?
+          </h1>
+          <p className="text-muted-foreground mt-1">Here is a simple summary of your results.</p>
         </div>
-
-        <div className="flex w-full sm:w-auto gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/ai-ad-generator">Generate Ad with AI</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/campaigns/new">Create Campaign</Link>
-          </Button>
-        </div>
+        <Link 
+          href="/campaigns/new" 
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          <PlusCircle className="h-5 w-5" />
+          Create Ad
+        </Link>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.name} className="transition-all hover:shadow-md border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {stat.name}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-2 mt-2">
-                    <Skeleton className="h-8 w-[100px]" />
-                    <Skeleton className="h-4 w-[60px]" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-foreground">
-                      {stat.value}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
-                      <span className="text-emerald-600 font-medium">{stat.trend}</span>
-                      <SimulatedBadge variant="subtle" label="Demo" />
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Active Campaigns Overview */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900">Active Ad Campaigns</h2>
-            <SimulatedBadge variant="subtle" />
-          </div>
-          <Link
-            href="/campaigns"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-          >
-            View All Campaigns <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {campaigns.map((camp) => (
-            <div
-              key={camp.id}
-              className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {camp.status}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500 font-mono">
-                    ${camp.dailyBudget}/day
-                  </span>
-                </div>
-
-                <h3 className="text-base font-bold text-slate-900">{camp.name}</h3>
-                <p className="text-xs text-slate-500 mt-1">{camp.location}</p>
-
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-center">
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Leads</span>
-                    <p className="text-sm font-bold text-slate-900">{camp.leadsCount}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Cost/Lead</span>
-                    <p className="text-sm font-bold text-blue-600">${camp.cpl.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">CTR</span>
-                    <p className="text-sm font-bold text-slate-900">{camp.ctr}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-mono text-[11px]">Spend: ${camp.totalSpend.toFixed(2)}</span>
-                <Link
-                  href="/analytics"
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Analytics &rarr;
-                </Link>
-              </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Leads generated", value: "0", icon: Users },
+          { label: "Calls received", value: "0", icon: Phone },
+          { label: "Ad spend", value: "$0.00", icon: DollarSign },
+          { label: "Cost per lead", value: "$0.00", icon: Target },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-sm font-medium">{stat.label}</span>
+              <stat.icon className="h-4 w-4" />
             </div>
-          ))}
-        </div>
+            <p className="text-3xl font-bold">{stat.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Recent Inquiries Preview */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900">Recent Inbound Leads</h2>
-            <SimulatedBadge variant="subtle" />
-          </div>
-          <Link
-            href="/leads"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-          >
-            Manage CRM Leads <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="divide-y divide-slate-100 overflow-x-auto">
-          {recentLeads.map((lead) => (
-            <div key={lead.id} className="py-3 flex items-center justify-between gap-4 text-xs">
-              <div className="min-w-[140px]">
-                <p className="font-semibold text-slate-900">{lead.name}</p>
-                <p className="text-slate-500 text-[11px]">{lead.location}</p>
-              </div>
-
-              <div className="hidden sm:block min-w-[130px]">
-                <span className="font-medium text-slate-700">{lead.service}</span>
-              </div>
-
-              <div>
-                <span className="font-bold text-slate-900 font-mono">
-                  ${lead.estimatedValue.toLocaleString()}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold">Active Ads</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {campaigns.map((camp) => (
+            <div key={camp.id} className="bg-card border rounded-2xl p-5 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 font-medium px-2.5 py-0.5 rounded-full text-xs">
+                  <span className="h-1.5 w-1.5 bg-green-600 rounded-full animate-pulse"></span>
+                  {camp.status || "Active"}
                 </span>
+                <span className="text-sm font-medium text-muted-foreground">${camp.daily_budget}/day</span>
               </div>
-
-              <div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                  lead.status === "won" ? "bg-green-100 text-green-800" :
-                  lead.status === "qualified" ? "bg-purple-100 text-purple-800" :
-                  lead.status === "estimate" ? "bg-indigo-100 text-indigo-800" :
-                  "bg-blue-100 text-blue-800"
-                }`}>
-                  {lead.status}
-                </span>
-              </div>
-
-              <span className="text-slate-400 text-[11px] min-w-[70px] text-right">
-                {lead.date}
-              </span>
+              <h3 className="font-bold text-lg mb-1">{camp.name}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{camp.location || "Local targeting"}</p>
+              
+              <Link href={`/analytics`} className="text-sm font-semibold text-primary hover:underline">
+                View Results &rarr;
+              </Link>
             </div>
           ))}
         </div>

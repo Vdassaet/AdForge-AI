@@ -1,55 +1,130 @@
-import { DateFilter } from "@/components/analytics/date-filter";
-import { MetricsGrid } from "@/components/analytics/metrics-grid";
-import { PerformanceCharts } from "@/components/analytics/performance-charts";
-import { ComparisonTables } from "@/components/analytics/comparison-tables";
-import { Download } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { LineChart, Users, Phone, DollarSign, Target, ArrowUpRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsPage() {
-  const hasData = true; // In a real app, query `analytics_daily` table
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    leads: 0,
+    calls: 0,
+    spend: 0,
+    cpl: 0
+  });
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadStats() {
+      // In a real app we'd aggregate campaigns and leads tables
+      // For now we will fetch leads count as a simple proxy for data existence
+      const { count: leadsCount } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true });
+        
+      const { count: campaignsCount } = await supabase
+        .from("campaigns")
+        .select("*", { count: "exact", head: true });
+
+      if (leadsCount !== null || campaignsCount !== null) {
+        // If there are no campaigns at all, we keep stats at 0
+        if (campaignsCount && campaignsCount > 0) {
+          // If we had real aggregation backend we would use it, but since we don't, 
+          // and the user explicitly said "NO inventes datos", we just show the real counts.
+          // Since spend is not easily aggregated without a backend function, we will keep it 0 if it can't be fetched
+          setStats({
+            leads: leadsCount || 0,
+            calls: 0, // Requires call tracking integration
+            spend: 0, // Requires billing integration
+            cpl: 0    // derived
+          });
+        }
+      }
+      setLoading(false);
+    }
+    loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  const hasData = stats.leads > 0 || stats.spend > 0;
+
+  if (!hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-lg mx-auto text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="bg-primary/10 p-6 rounded-full mb-2">
+          <LineChart className="h-12 w-12 text-primary" />
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          Your results will appear here.
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          Once your first campaign is running and customers start interacting with your ads, you&apos;ll see your results here.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header & Date Filter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Analytics</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Measure ad performance, cost per lead, and estimated revenue.
-          </p>
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Your Results</h1>
+        <p className="text-muted-foreground mt-1">A simple breakdown of what your ads have generated.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-sm font-medium">Leads generated</span>
+            <Users className="h-4 w-4" />
+          </div>
+          <p className="text-3xl font-bold">{stats.leads}</p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <DateFilter />
-          <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors h-[34px]">
-            <Download className="w-4 h-4" /> Export
-          </button>
+        <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-sm font-medium">Calls generated</span>
+            <Phone className="h-4 w-4" />
+          </div>
+          <p className="text-3xl font-bold">{stats.calls}</p>
+        </div>
+        <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-sm font-medium">Ad spend</span>
+            <DollarSign className="h-4 w-4" />
+          </div>
+          <p className="text-3xl font-bold">${stats.spend.toFixed(2)}</p>
+        </div>
+        <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-sm font-medium">Cost per lead</span>
+            <Target className="h-4 w-4" />
+          </div>
+          <p className="text-3xl font-bold">${stats.cpl.toFixed(2)}</p>
         </div>
       </div>
 
-      {!hasData ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+      {stats.leads > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 mt-8">
+          <div className="bg-blue-100 p-4 rounded-full text-blue-600 shrink-0">
+            <Target className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">No Data Available Yet</h2>
-          <p className="text-slate-500 max-w-md mx-auto mb-6">
-            We don&apos;t have any analytics data to show. Once you publish your first campaign and start receiving traffic, your metrics will appear here.
-          </p>
-          <a href="/campaigns/new" className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-            Create Campaign
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="text-lg font-bold text-blue-900 mb-1">You&apos;re getting leads!</h3>
+            <p className="text-blue-800">
+              Your ads are actively generating leads. We recommend keeping your campaigns active to maintain this momentum.
+            </p>
+          </div>
+          <a href="/leads" className="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap">
+            View Leads <ArrowUpRight className="h-4 w-4" />
           </a>
         </div>
-      ) : (
-        <>
-          <MetricsGrid />
-          <PerformanceCharts />
-          <div className="pt-2">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Detailed Breakdown</h3>
-            <ComparisonTables />
-          </div>
-        </>
       )}
     </div>
   );

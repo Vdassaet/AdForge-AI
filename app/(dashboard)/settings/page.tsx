@@ -1,73 +1,61 @@
-import Link from "next/link";
-import { Building, Users, Sliders, ArrowRight } from "lucide-react";
+"use client";
 
-export default function SettingsIndexPage() {
+import Link from "next/link";
+import { User, Building, CreditCard, Facebook, Bell, Users, Shield, Sliders } from "lucide-react";
+
+export default function SettingsPage() {
   const sections = [
     {
-      title: "Organization Settings",
-      description: "Manage company information, contact details, and brand identity.",
-      href: "/settings/organization",
-      icon: Building,
+      title: "Account & Business",
+      items: [
+        { name: "Account Details", href: "#", icon: User, desc: "Manage your personal information and password." },
+        { name: "Business Profile", href: "/business", icon: Building, desc: "Update your business information and assets." },
+        { name: "Team Members", href: "#", icon: Users, desc: "Invite your team to collaborate." },
+      ]
     },
     {
-      title: "Team Management",
-      description: "Invite team members, assign RBAC permissions, and manage access.",
-      href: "/settings/team",
-      icon: Users,
+      title: "Integrations & Billing",
+      items: [
+        { name: "Facebook & Instagram", href: "/integrations/meta", icon: Facebook, desc: "Connect your ad accounts and pages." },
+        { name: "Billing & Plans", href: "/billing", icon: CreditCard, desc: "Manage your subscription and payment methods." },
+        { name: "Notifications", href: "/notifications", icon: Bell, desc: "Configure how you want to be alerted." },
+      ]
     },
     {
-      title: "Plan Limits (Admin)",
-      description: "Configure SaaS plan quotas, limits, and real-time usage rules.",
-      href: "/settings/plan-limits",
-      icon: Sliders,
-      badge: "Admin",
-    },
+      title: "Advanced",
+      items: [
+        { name: "Security", href: "#", icon: Shield, desc: "Two-factor authentication and security settings." },
+        { name: "Advanced Settings", href: "#", icon: Sliders, desc: "Technical configurations and developer options." },
+      ]
+    }
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage your organization, team members, and system plan configurations.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage your account and advanced configurations.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {sections.map((section) => {
-          const Icon = section.icon;
-          return (
-            <Link
-              key={section.href}
-              href={section.href}
-              className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition-all flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-600 flex items-center justify-center transition-colors">
-                    <Icon className="w-5 h-5" />
+      <div className="space-y-8">
+        {sections.map((section) => (
+          <div key={section.title} className="space-y-4">
+            <h2 className="text-xl font-bold text-foreground">{section.title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {section.items.map((item) => (
+                <Link key={item.name} href={item.href} className="bg-card border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/50 transition-all flex items-start gap-4 group">
+                  <div className="bg-muted p-3 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <item.icon className="h-6 w-6" />
                   </div>
-                  {section.badge && (
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full uppercase">
-                      {section.badge}
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-base font-semibold text-slate-900 mb-1">
-                  {section.title}
-                </h2>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {section.description}
-                </p>
-              </div>
-
-              <div className="mt-6 flex items-center gap-1 text-xs font-semibold text-blue-600 group-hover:text-blue-700">
-                <span>Manage</span>
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-              </div>
-            </Link>
-          );
-        })}
+                  <div>
+                    <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

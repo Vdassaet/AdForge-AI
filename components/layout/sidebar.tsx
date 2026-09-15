@@ -20,14 +20,8 @@ export function Sidebar() {
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto no-scrollbar">
         <nav className="flex-1 space-y-1 p-4">
-          {navigation.map((item, index) => {
-            if (item.heading || !item.href) {
-              return (
-                <div key={index} className="mt-6 mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {item.heading}
-                </div>
-              );
-            }
+          {navigation.map((item) => {
+            if (!item.href) return null;
             
             const Icon = item.icon;
             const href = item.href;

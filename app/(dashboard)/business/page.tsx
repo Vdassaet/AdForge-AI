@@ -1,175 +1,131 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { useState } from "react";
-import { Save } from "lucide-react";
-import { demoStore } from "@/lib/demo/demo-data";
-import { SimulatedBadge } from "@/components/demo/simulated-badge";
+import { useState, useEffect } from "react";
+import { MapPin, Globe, Phone, Camera, PenSquare, PlusCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+import Image from "next/image";
+
+interface BusinessProfile {
+  name: string;
+  tagline?: string;
+  website?: string;
+  phone?: string;
+  logo_url?: string;
+}
 
 export default function BusinessProfilePage() {
-  const business = demoStore.getBusiness();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    businessName: business.name,
-    legalName: business.legalName,
-    description: business.description,
-    phone: business.phone,
-    email: business.email,
-    website: business.website,
-    industry: business.industry,
-    category: "Fence & Custom Railing Contractor",
-    years: "15",
-    radius: "30",
-    license: "NJ HIC #13VH09876500",
-    insurance: "$2,000,000 General Commercial Liability",
-  });
+  const [loading, setLoading] = useState(true);
+  const [business, setBusiness] = useState<BusinessProfile | null>(null);
+  const supabase = createClient();
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
+  useEffect(() => {
+    async function loadBusiness() {
+      // In a real app we'd fetch the user's organization profile
+      // We will attempt to get it from a potential 'organizations' table or similar.
+      // If none exists, we show empty state or defaults.
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        // Just checking metadata for now if no organizations table exists
+        setBusiness({
+          name: userData.user.user_metadata?.first_name 
+            ? `${userData.user.user_metadata.first_name}'s Business`
+            : "Your Business",
+        });
+      }
       setLoading(false);
-      toast.success("Business profile saved successfully (Simulated)!");
-    }, 600);
-  };
+    }
+    loadBusiness();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Business Profile</h1>
-            <SimulatedBadge variant="outline" label="Demo Profile" />
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Complete your profile so our AI can generate hyper-relevant ad copy tailored to your business.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Your Business</h1>
+          <p className="text-muted-foreground mt-1">This information is used by the AI to generate your ads.</p>
         </div>
+        <button className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-colors">
+          <PenSquare className="h-4 w-4" /> Edit business
+        </button>
       </div>
 
-      <Card>
-        <form onSubmit={handleSave}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Company Information</CardTitle>
-                <CardDescription>
-                  This information serves as the baseline context for AI ad generation and local targeting.
-                </CardDescription>
-              </div>
-              <SimulatedBadge variant="subtle" />
+      <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-8 flex flex-col md:flex-row gap-8 items-start">
+          <div className="w-32 h-32 bg-muted rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground shrink-0 relative group cursor-pointer overflow-hidden">
+            {business?.logo_url ? (
+              <Image src={business.logo_url} fill alt="Logo" className="object-cover" />
+            ) : (
+              <>
+                <Camera className="h-8 w-8 mb-2" />
+                <span className="text-xs font-semibold">Add Logo</span>
+              </>
+            )}
+            <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold transition-all">
+              Change
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="businessName">Business Name</Label>
-                <Input
-                  id="businessName"
-                  value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                />
+          </div>
+          
+          <div className="flex-1 space-y-6 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-muted-foreground">Business Name</label>
+                <p className="text-lg font-bold">{business?.name || "Not set"}</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="legalName">Legal Business Name</Label>
-                <Input
-                  id="legalName"
-                  value={formData.legalName}
-                  onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
-                />
-              </div>
-              <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="description">Business Description</Label>
-                <textarea
-                  id="description"
-                  rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Business Email</Label>
-                <Input
-                  id="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
-                <Input
-                  id="industry"
-                  value={formData.industry}
-                  onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="years">Years in Business</Label>
-                <Input
-                  id="years"
-                  type="number"
-                  value={formData.years}
-                  onChange={(e) => setFormData({ ...formData, years: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="radius">Service Radius (Miles)</Label>
-                <Input
-                  id="radius"
-                  type="number"
-                  value={formData.radius}
-                  onChange={(e) => setFormData({ ...formData, radius: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="license">License Information</Label>
-                <Input
-                  id="license"
-                  value={formData.license}
-                  onChange={(e) => setFormData({ ...formData, license: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="insurance">Insurance Information</Label>
-                <Input
-                  id="insurance"
-                  value={formData.insurance}
-                  onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
-                />
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-muted-foreground">What you do</label>
+                <p className="text-lg font-medium">{business?.tagline || "Not set"}</p>
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-2">
-              <Save className="w-4 h-4" />
-              {loading ? "Saving..." : "Save Profile"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+
+            <hr className="border-border" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" /> Service Area
+                </label>
+                <p className="font-medium">Not set</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Globe className="h-4 w-4" /> Website
+                </label>
+                <p className="font-medium text-primary">{business?.website || "Not set"}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Phone className="h-4 w-4" /> Phone
+                </label>
+                <p className="font-medium">{business?.phone || "Not set"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-card border rounded-2xl shadow-sm p-8">
+        <h2 className="text-xl font-bold mb-6">Business Photos</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="aspect-square bg-muted rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:bg-muted/80 transition-colors">
+            <PlusCircle className="h-8 w-8 mb-2" />
+            <span className="text-xs font-semibold">Upload Photo</span>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground mt-4">
+          Upload photos of your team, your work, or your office. The AI will use these in your ads.
+        </p>
+      </div>
     </div>
   );
 }
