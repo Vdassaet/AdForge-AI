@@ -25,8 +25,7 @@ export async function login(formData: FormData) {
     return { error: error.message };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  return { success: true };
 }
 
 export async function signup(formData: FormData) {
@@ -42,7 +41,7 @@ export async function signup(formData: FormData) {
 
   const supabase = createClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -57,8 +56,12 @@ export async function signup(formData: FormData) {
     return { error: error.message };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/onboarding");
+  // If email confirmation is required, the session will be null
+  if (data.user && !data.session) {
+    return { error: "Please check your email to verify your account." };
+  }
+
+  return { success: true };
 }
 
 export async function logout() {

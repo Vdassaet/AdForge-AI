@@ -4,9 +4,11 @@ import Link from "next/link";
 import { login } from "../actions";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
@@ -14,10 +16,12 @@ export default function LoginPage() {
       const result = await login(formData);
       if (result?.error) {
         toast.error(result.error);
+      } else if (result?.success) {
+        toast.success("Welcome back!");
+        router.push("/dashboard");
+        router.refresh();
       }
     } catch (error: unknown) {
-      // Ignore NEXT_REDIRECT error
-      if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);

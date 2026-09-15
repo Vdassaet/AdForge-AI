@@ -4,9 +4,11 @@ import Link from "next/link";
 import { signup } from "../actions";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
@@ -14,9 +16,12 @@ export default function SignupPage() {
       const result = await signup(formData);
       if (result?.error) {
         toast.error(result.error);
+      } else if (result?.success) {
+        toast.success("Account created successfully!");
+        router.push("/onboarding");
+        router.refresh();
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
