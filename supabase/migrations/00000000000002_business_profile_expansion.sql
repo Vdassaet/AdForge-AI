@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS business_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
     business_name TEXT NOT NULL,
     industry TEXT NOT NULL DEFAULT 'Contractor',
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS business_profiles (
 );
 
 CREATE TABLE IF NOT EXISTS business_services (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS business_services (
 );
 
 CREATE TABLE IF NOT EXISTS business_service_areas (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     city TEXT NOT NULL,
     state TEXT NOT NULL,

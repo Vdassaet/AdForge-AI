@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_lookup
 -- 2. Webhook Idempotency & Deduplication Store
 -- Prevents duplicate billing mutations, double credits, and race conditions
 CREATE TABLE IF NOT EXISTS webhook_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider TEXT NOT NULL CHECK (provider IN ('stripe', 'meta', 'sendgrid', 'twilio', 'custom')),
     event_id TEXT NOT NULL,
     event_type TEXT NOT NULL,

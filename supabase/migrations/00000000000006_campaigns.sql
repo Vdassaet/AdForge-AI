@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS campaigns (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     creative_id UUID REFERENCES ad_creatives(id) ON DELETE SET NULL,
     name TEXT NOT NULL,

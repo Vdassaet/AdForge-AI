@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS ai_generations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     business_name TEXT NOT NULL,
     service TEXT NOT NULL,

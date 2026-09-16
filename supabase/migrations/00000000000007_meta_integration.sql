@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS meta_connections (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
     access_token TEXT NOT NULL, -- Encrypted at application layer
     token_expires_at TIMESTAMPTZ,

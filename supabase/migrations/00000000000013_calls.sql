@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS calls (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
     campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,

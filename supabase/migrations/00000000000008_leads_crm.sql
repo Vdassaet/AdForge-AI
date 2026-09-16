@@ -3,7 +3,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS leads (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 
 CREATE TABLE IF NOT EXISTS lead_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
     event_type TEXT NOT NULL, -- created, status_changed, note_added, contacted, assigned
     description TEXT NOT NULL,
