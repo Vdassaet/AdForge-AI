@@ -6,7 +6,7 @@ import {
   RateLimitExceededError,
   UsageStatus,
 } from "@/lib/services/billing/usage";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext, AuthError } from "@/lib/auth/auth-context";
 
 export interface CreativeData {
   businessName: string;
@@ -28,29 +28,27 @@ export interface SaveCreativeResponse {
   upgradeRequired?: boolean;
 }
 
+/**
+ * Saves a creative for the authenticated user's organization.
+ *
+ * organizationId and planId are resolved server-side from the Supabase
+ * session — never accepted from client arguments.
+ */
 export async function saveCreativeAction(
-  creativeData: CreativeData,
-  organizationId = "demo-org-1",
-  planId = "free"
+  creativeData: CreativeData
 ): Promise<SaveCreativeResponse> {
   try {
-    if (process.env.NODE_ENV !== "test" && !organizationId.startsWith("org_") && !organizationId.startsWith("demo")) {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        return { error: "Unauthorized. You must be logged in to save creatives." };
-      }
-    }
+    // Auth: resolve org + plan from session (never from client)
+    const ctx = await getAuthContext();
 
     // 1. Quota & abuse enforcement (never silently fail)
-    await usageService.assertCanPerformAction(organizationId, "creative", planId);
+    await usageService.assertCanPerformAction(ctx.organizationId, "creative", ctx.planId);
 
     // 2. Generate simulated ID / database entry
     const creativeId = `cr_${Date.now()}`;
 
     // 3. Every usage event must be recorded
-    await usageService.recordUsage(organizationId, "creative", {
+    await usageService.recordUsage(ctx.organizationId, "creative", {
       creativeId,
       headline: creativeData.headline,
       aspectRatio: creativeData.aspectRatio,
@@ -58,8 +56,8 @@ export async function saveCreativeAction(
       imageUrl: creativeData.imageUrl,
     });
 
-    const currentCount = usageService.getUsageCount(organizationId, "creative");
-    const usage = usageService.checkUsage(planId, "creative", currentCount);
+    const currentCount = usageService.getUsageCount(ctx.organizationId, "creative");
+    const usage = usageService.checkUsage(ctx.planId, "creative", currentCount);
 
     return {
       success: true,
@@ -67,6 +65,10 @@ export async function saveCreativeAction(
       usage,
     };
   } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: error.message };
+    }
+
     if (error instanceof UsageLimitExceededError) {
       console.warn(`[Creative Blocked] ${error.message}`);
       return {
@@ -90,10 +92,11 @@ export async function saveCreativeAction(
   }
 }
 
-export async function getCreativeUsageAction(
-  organizationId = "demo-org-1",
-  planId = "free"
-): Promise<UsageStatus> {
-  const currentCount = usageService.getUsageCount(organizationId, "creative");
-  return usageService.checkUsage(planId, "creative", currentCount);
+/**
+ * Returns the creative usage status for the authenticated user's organization.
+ */
+export async function getCreativeUsageAction(): Promise<UsageStatus> {
+  const ctx = await getAuthContext();
+  const currentCount = usageService.getUsageCount(ctx.organizationId, "creative");
+  return usageService.checkUsage(ctx.planId, "creative", currentCount);
 }

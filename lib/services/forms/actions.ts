@@ -1,6 +1,8 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const FormSubmissionSchema = z.object({
   formId: z.string().uuid(),
@@ -14,6 +16,26 @@ const FormSubmissionSchema = z.object({
   // Honeypot field for spam bots
   website_url: z.string().max(0, "Invalid submission").optional(),
 });
+
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_SUBMISSIONS = 5;
+const requestTimestamps = new Map<string, number[]>();
+
+function isRateLimited(requestKey: string): boolean {
+  const now = Date.now();
+  const timestamps = (requestTimestamps.get(requestKey) ?? []).filter(
+    (timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS
+  );
+
+  if (timestamps.length >= RATE_LIMIT_MAX_SUBMISSIONS) {
+    requestTimestamps.set(requestKey, timestamps);
+    return true;
+  }
+
+  timestamps.push(now);
+  requestTimestamps.set(requestKey, timestamps);
+  return false;
+}
 
 export async function submitPublicLeadForm(formData: FormData) {
   try {
@@ -33,35 +55,36 @@ export async function submitPublicLeadForm(formData: FormData) {
 
     // Spam Protection: Honeypot check
     if (validated.website_url && validated.website_url.length > 0) {
-      console.warn("Spam bot detected via honeypot.");
       return { success: true }; // Fake success for bots
     }
 
-    // TODO: In production, fetch `lead_forms` to get `organization_id` using a Service Role Key (bypassing RLS)
-    // const orgId = await getOrganizationIdByForm(validated.formId);
+    const forwardedFor = headers().get("x-forwarded-for");
+    const ipAddress = forwardedFor?.split(",")[0]?.trim() || headers().get("x-real-ip") || "unknown";
+    if (isRateLimited(`${validated.formId}:${ipAddress}`)) {
+      return { success: false, error: "Too many submissions. Please try again later." };
+    }
 
-    // TODO: Insert lead into `leads` table with Service Role Key
-    /*
-      await supabaseAdmin.from('leads').insert({
-        organization_id: orgId,
-        name: validated.name,
-        phone: validated.phone,
-        email: validated.email,
-        service: validated.service,
-        message: validated.message,
-        source: 'Website',
-        status: 'new'
-      });
-    */
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin.rpc("record_public_lead", {
+      _form_id: validated.formId,
+      _name: validated.name,
+      _phone: validated.phone,
+      _email: validated.email || "",
+      _service: validated.service || "",
+      _message: validated.message || "",
+      _address: validated.address || "",
+      _preferred_date: validated.preferred_date || "",
+    });
 
-    // TODO: Insert into `lead_events`
-    console.log(`[Form Action] Lead successfully captured for form ${validated.formId}: ${validated.name}`);
+    if (error) {
+      console.error("Public lead submission failed", { code: error.code });
+      return { success: false, error: "We could not submit your request. Please try again." };
+    }
     
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return { success: false, error: (error as any).errors[0].message };
+      return { success: false, error: error.issues[0]?.message ?? "Invalid form data." };
     }
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }

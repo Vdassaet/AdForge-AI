@@ -21,6 +21,11 @@ import {
   resetPlanLimitsAction,
 } from "../../app/(dashboard)/settings/plan-limits/actions";
 
+// Server actions resolve their tenant from the server-only demo context in
+// these isolated unit tests. Production requests never accept this from clients.
+const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000000";
+process.env.ADFORGE_DEMO_MODE = "true";
+
 describe("SaaS Plan Configuration & Limits", () => {
   beforeEach(() => {
     usageService.resetStateForTesting();
@@ -261,7 +266,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
   });
 
   test("generateAdAction enforces Free limit (10) and provides upgrade payload", async () => {
-    const orgId = "org_action_ai";
+    const orgId = DEMO_ORG_ID;
 
     // 1st generation succeeds
     const res1 = await generateAdAction(
@@ -272,9 +277,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
         targetCustomer: "Homeowners",
         cta: "Call Now",
         tone: "Professional",
-      },
-      orgId,
-      "free"
+      }
     );
     assert.ok(res1.data);
     assert.equal(res1.limitReached, undefined);
@@ -293,9 +296,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
         targetCustomer: "Homeowners",
         cta: "Call Now",
         tone: "Professional",
-      },
-      orgId,
-      "free"
+      }
     );
 
     assert.equal(resBlocked.limitReached, true, "Should flag limitReached");
@@ -306,7 +307,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
   });
 
   test("saveCreativeAction enforces Free limit (5) and records creative usage", async () => {
-    const orgId = "org_action_creative";
+    const orgId = DEMO_ORG_ID;
 
     // 1st creative succeeds and records event
     const res1 = await saveCreativeAction(
@@ -318,9 +319,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
         cta: "Get Quote",
         imageUrl: "https://example.com/roof.jpg",
         aspectRatio: "1:1",
-      },
-      orgId,
-      "free"
+      }
     );
     assert.equal(res1.success, true);
     assert.equal(usageService.getUsageCount(orgId, "creative"), 1);
@@ -340,9 +339,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
         cta: "Get Quote",
         imageUrl: "https://example.com/roof.jpg",
         aspectRatio: "1:1",
-      },
-      orgId,
-      "free"
+      }
     );
 
     assert.equal(resBlocked.limitReached, true);
@@ -351,7 +348,7 @@ describe("Server Actions Usage Enforcement Integration", () => {
   });
 
   test("publishCampaignAction enforces Free limit (1) and records campaign publication", async () => {
-    const orgId = "org_action_campaign";
+    const orgId = DEMO_ORG_ID;
 
     // 1st campaign succeeds
     const res1 = await publishCampaignAction(
@@ -361,10 +358,11 @@ describe("Server Actions Usage Enforcement Integration", () => {
         service: "Roofing",
         location: "Paramus, NJ",
         dailyBudget: 25,
+        totalBudget: 100,
+        currency: "USD",
+        spendAcknowledged: true,
         startDate: "2026-09-15",
-      },
-      orgId,
-      "free"
+      }
     );
     assert.equal(res1.success, true);
     assert.equal(usageService.getUsageCount(orgId, "campaign"), 1);
@@ -377,10 +375,11 @@ describe("Server Actions Usage Enforcement Integration", () => {
         service: "Gutters",
         location: "Paramus, NJ",
         dailyBudget: 15,
+        totalBudget: 100,
+        currency: "USD",
+        spendAcknowledged: true,
         startDate: "2026-09-16",
-      },
-      orgId,
-      "free"
+      }
     );
 
     assert.equal(resBlocked.limitReached, true);

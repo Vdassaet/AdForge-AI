@@ -24,7 +24,7 @@ export default function SignupPage() {
         },
       });
       if (error) throw error;
-    } catch (error) {
+    } catch {
       toast.error("Failed to connect to Google");
       setIsGoogleLoading(false);
     }
@@ -41,7 +41,7 @@ export default function SignupPage() {
         router.push("/onboarding");
         router.refresh();
       }
-    } catch (error: unknown) {
+    } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);

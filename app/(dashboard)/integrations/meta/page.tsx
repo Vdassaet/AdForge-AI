@@ -9,28 +9,31 @@ import { Suspense } from "react";
 function MetaIntegrationContent() {
   const searchParams = useSearchParams();
   const [isConnected, setIsConnected] = useState(false);
-  const [isConfigured] = useState(true); // In reality, fetch from server if process.env.META_APP_ID is present
+  const [isConfigured, setIsConfigured] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [account, setAccount] = useState<{ pageName: string | null; adAccountId: string | null; adAccountName: string | null }>({ pageName: null, adAccountId: null, adAccountName: null });
+
+  const refreshStatus = async () => {
+    const response = await fetch("/api/integrations/meta/status", { cache: "no-store" });
+    if (!response.ok) return;
+    const status = await response.json();
+    setIsConfigured(Boolean(status.configured));
+    setIsConnected(Boolean(status.connected));
+    setAccount({ pageName: status.pageName ?? null, adAccountId: status.adAccountId ?? null, adAccountName: status.adAccountName ?? null });
+  };
 
   useEffect(() => {
-    // Check URL params for success/error from callback
-    if (searchParams.get("success") === "true") {
-      setIsConnected(true);
-    }
+    void refreshStatus();
   }, [searchParams]);
 
   const handleConnect = () => {
     setIsConnecting(true);
-    // Simulate redirection to the OAuth URL
-    // e.g. window.location.href = getAuthorizationUrl(state);
-    setTimeout(() => {
-      window.location.href = "/api/auth/meta/callback?code=simulated_code&state=123";
-    }, 1000);
+    window.location.href = "/api/auth/meta/start";
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    // In a real app, call an API to delete the token and log to audit_logs
+  const handleDisconnect = async () => {
+    const response = await fetch("/api/integrations/meta/disconnect", { method: "DELETE" });
+    if (response.ok) await refreshStatus();
   };
 
   return (
@@ -86,13 +89,12 @@ function MetaIntegrationContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-4 border border-slate-200 rounded-lg">
                   <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Connected Account</p>
-                  <p className="font-medium text-slate-900">NJ Fence and Railing</p>
-                  <p className="text-xs text-slate-500 mt-0.5">ID: 104938209483</p>
+                  <p className="font-medium text-slate-900">{account.pageName || "No Page selected"}</p>
                 </div>
                 <div className="bg-white p-4 border border-slate-200 rounded-lg">
                   <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Ad Account</p>
-                  <p className="font-medium text-slate-900">AdForge Primary</p>
-                  <p className="text-xs text-slate-500 mt-0.5">act_1029384756</p>
+                  <p className="font-medium text-slate-900">{account.adAccountName || "No ad account selected"}</p>
+                  {account.adAccountId && <p className="text-xs text-slate-500 mt-0.5">ID: {account.adAccountId}</p>}
                 </div>
               </div>
 
@@ -103,7 +105,7 @@ function MetaIntegrationContent() {
                 >
                   <XCircle className="w-4 h-4 mr-2" /> Disconnect
                 </button>
-                <button className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-50 bg-white flex items-center transition-colors">
+                <button onClick={() => void refreshStatus()} className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-50 bg-white flex items-center transition-colors">
                   <RefreshCw className="w-4 h-4 mr-2" /> Refresh Connection
                 </button>
               </div>

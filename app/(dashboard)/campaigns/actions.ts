@@ -6,7 +6,8 @@ import {
   RateLimitExceededError,
   UsageStatus,
 } from "@/lib/services/billing/usage";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext, AuthError } from "@/lib/auth/auth-context";
+import { validateCampaignSpend } from "@/lib/services/campaigns/spend-controls";
 
 export interface CampaignPublishData {
   name: string;
@@ -14,6 +15,9 @@ export interface CampaignPublishData {
   service: string;
   location: string;
   dailyBudget: number;
+  totalBudget: number;
+  currency: string;
+  spendAcknowledged: boolean;
   startDate: string;
 }
 
@@ -25,49 +29,67 @@ export interface PublishCampaignResponse {
   rateLimited?: boolean;
   usage?: UsageStatus;
   upgradeRequired?: boolean;
+  simulated?: boolean;
 }
 
+/**
+ * Publishes a campaign for the authenticated user's organization.
+ *
+ * organizationId and planId are resolved server-side from the Supabase
+ * session — never accepted from client arguments.
+ */
 export async function publishCampaignAction(
-  campaignData: CampaignPublishData,
-  organizationId = "demo-org-1",
-  planId = "free"
+  campaignData: CampaignPublishData
 ): Promise<PublishCampaignResponse> {
   try {
-    if (process.env.NODE_ENV !== "test" && !organizationId.startsWith("org_") && !organizationId.startsWith("demo")) {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+    // Auth: resolve org + plan from session (never from client)
+    const ctx = await getAuthContext();
 
-      if (!user) {
-        return { error: "Unauthorized. You must be logged in to publish campaigns." };
-      }
+    const spendCheck = validateCampaignSpend({
+      dailyBudget: campaignData.dailyBudget,
+      totalBudget: campaignData.totalBudget,
+      currency: campaignData.currency,
+      spendAcknowledged: campaignData.spendAcknowledged,
+    });
+    if (!spendCheck.ok) {
+      return { error: spendCheck.error };
     }
 
     // 1. Quota & abuse enforcement (never silently fail)
-    await usageService.assertCanPerformAction(organizationId, "campaign", planId);
+    await usageService.assertCanPerformAction(ctx.organizationId, "campaign", ctx.planId);
 
     // 2. Perform publishing logic / simulated Meta sync
     const campaignId = `camp_${Date.now()}`;
 
     // 3. Every usage event must be recorded
-    await usageService.recordUsage(organizationId, "campaign", {
+    await usageService.recordUsage(ctx.organizationId, "campaign", {
       campaignId,
       name: campaignData.name,
       objective: campaignData.objective,
       service: campaignData.service,
       location: campaignData.location,
       dailyBudget: campaignData.dailyBudget,
+      totalBudget: campaignData.totalBudget,
+      currency: campaignData.currency,
       startDate: campaignData.startDate,
     });
 
-    const currentCount = usageService.getUsageCount(organizationId, "campaign");
-    const usage = usageService.checkUsage(planId, "campaign", currentCount);
+    const currentCount = usageService.getUsageCount(ctx.organizationId, "campaign");
+    const usage = usageService.checkUsage(ctx.planId, "campaign", currentCount);
 
     return {
       success: true,
       campaignId,
       usage,
+      // No advertising-network integration exists yet. Never represent this
+      // local validation as a live, billable campaign.
+      simulated: true,
     };
   } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: error.message };
+    }
+
     if (error instanceof UsageLimitExceededError) {
       console.warn(`[Campaign Blocked] ${error.message}`);
       return {
@@ -91,10 +113,11 @@ export async function publishCampaignAction(
   }
 }
 
-export async function getCampaignUsageAction(
-  organizationId = "demo-org-1",
-  planId = "free"
-): Promise<UsageStatus> {
-  const currentCount = usageService.getUsageCount(organizationId, "campaign");
-  return usageService.checkUsage(planId, "campaign", currentCount);
+/**
+ * Returns the campaign usage status for the authenticated user's organization.
+ */
+export async function getCampaignUsageAction(): Promise<UsageStatus> {
+  const ctx = await getAuthContext();
+  const currentCount = usageService.getUsageCount(ctx.organizationId, "campaign");
+  return usageService.checkUsage(ctx.planId, "campaign", currentCount);
 }
